@@ -2,24 +2,30 @@ const fs = require('fs');
 const https = require('https');
 const WebSocket = require('ws');
 
-const server = https.createServer({
+const serial = require('./serial_handler');
+
+const wsServer = https.createServer({
   cert: fs.readFileSync('localhost.cert'),
   key: fs.readFileSync('localhost.key')
 });
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({ server: wsServer });
 
 wss.on('connection', function connection(ws) {
   ws.on('message', function incoming(message) {
-    console.log('received: %s', message);
+    if (message.startsWith("P")) {
+      serial.setup(message);
+    }
+    else {
+      serial.handleMessage(message);
+    }
   });
-
-  ws.send('something');
+  console.log('Client connected.');
 });
 
 module.exports = {
   start: function () {
-    server.listen(8080);
-    console.log("Websocket server running.");
+    wsServer.listen(61000);
+    console.log("Websocket wsServer running.");
   }
 };
 

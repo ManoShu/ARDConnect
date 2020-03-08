@@ -1,0 +1,14 @@
+P|COMPORT|POLLRATE => Setup serial port. 
+    COMPORT = Serial port name
+    POLLRATE = rate that the board will sent the input pin's 
+        state values, at a rate of POLLRATE messages/second
+
+M|PIN|[O|I|IU|ID]|[D|A] => Set mode for PIN. 
+    2nd arg = (O = OUTPUT, I = INPUT, IU = INPUT_PULLUP, ID = INPUT_PULLDOWN)
+    3rd arg = D = DIGITAL, A = ANALOG
+
+S => Start polling. The board will start sending state messages 
+
+W|PIN|VALUE => Writes VALUE on PIN
+
+(INTERNAL) R|POLLRATE => Sends pollrate to board 
