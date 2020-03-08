@@ -26,6 +26,7 @@ module.exports = {
         );
     },
     setup: function (message, dataReceived) {
+        if (portReady) return;
         dataReceivedCallback = dataReceived;
         var messageArgs = message.split("|");
         var comPort = messageArgs[1];
