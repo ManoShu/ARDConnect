@@ -1,0 +1,40 @@
+{
+  "name": "ardconnect",
+  "version": "0.1.0",
+  "description": "Bridge between Construct 2/3 and an Arduino Uno compatible board",
+  "main": "main.js",
+  "bin": "main.js",
+  "dependencies": {
+    "fs": "^0.0.1-security",
+    "https": "^1.0.0",
+    "serialport": "^8.0.7",
+    "ws": "^7.2.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ManoShu/ARDConnect.git"
+  },
+  "keywords": [
+    "construct",
+    "arduino",
+    "websocket",
+    "nodejs",
+    "serialport"
+  ],
+  "author": "Fernando \"ManoShu\" Rodrigues",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/ManoShu/ARDConnect/issues"
+  },
+  "homepage": "https://github.com/ManoShu/ARDConnect#readme",
+  "pkg": {
+    "assets": [
+      "localhost.cert",
+      "localhost.key"
+    ]
+  }
+}

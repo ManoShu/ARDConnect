@@ -16,5 +16,11 @@ wss.on('connection', function connection(ws) {
   ws.send('something');
 });
 
-server.listen(8080);
-console.log("Websocket server running.");
+module.exports = {
+  start: function () {
+    server.listen(8080);
+    console.log("Websocket server running.");
+  }
+};
+
+
