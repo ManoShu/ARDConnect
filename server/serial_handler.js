@@ -1,5 +1,7 @@
 const SerialPort = require('serialport');
 
+var readline = require('readline');
+
 var port = undefined;
 var portReady = false;
 
@@ -10,32 +12,57 @@ function sendMessage(message) {
 
 var dataReceivedCallback = undefined;
 var buffer = '';
+var comPort = '';
+
 
 module.exports = {
-    listPorts: function () {
+    selectPort: function (portSelected) {
 
         SerialPort.list().then(
-            function (ports) {
+            portList => {
                 console.log("Available ports:");
-                ports.forEach(function (e) {
-                    console.log('%s (%s) - %s',
-                        e.path, e.manufacturer, e.productId);
+                var portIndex = 0;
+                portList.forEach(function (e) {
+                    portIndex++;
+                    console.log('[%i] %s (%s) - %s',
+                        portIndex, e.path, e.manufacturer, e.productId);
                 });
-            },
-            err => console.error(err)
-        );
+
+                var rl = readline.createInterface(process.stdin, process.stdout);
+
+                rl.setPrompt('Select a COM port> ');
+                rl.prompt();
+                rl.on('line', function (line) {
+
+                    var selectedIndex = parseInt(line);
+                    if (isNaN(selectedIndex) || selectedIndex < 1 || selectedIndex > portList.length) {
+                        console.log("Invalid index!");
+                        rl.prompt();
+                    }
+                    else {
+                        var thePort = portList[selectedIndex - 1].path;
+
+                        rl.close();
+                        portSelected(thePort);
+                    }
+                });
+            });
+    },
+
+    setPort: function(thePort){
+        comPort = thePort;
     },
     setup: function (message, dataReceived) {
         if (portReady) return;
         dataReceivedCallback = dataReceived;
-        var messageArgs = message.split("|");
-        var comPort = messageArgs[1];
-        var pollRate = messageArgs[2];
+        //var messageArgs = message.split("|");
+        //var pollRate = messageArgs[1];
         port = new SerialPort(comPort, {
             baudRate: 115200
         });
         port.on('open', function () {
-            sendMessage('R|'.concat(pollRate));
+            //sendMessage('R|'.concat(pollRate));
+            sendMessage(message);
             portReady = true;
         });
         port.on('data', function (chunk) {

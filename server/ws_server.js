@@ -1,7 +1,6 @@
 const fs = require('fs');
 const https = require('https');
 const WebSocket = require('ws');
-
 const serial = require('./serial_handler');
 
 const wsServer = https.createServer({
@@ -12,8 +11,11 @@ const wss = new WebSocket.Server({ server: wsServer });
 
 wss.on('connection', function connection(ws) {
   ws.on('message', function incoming(message) {
-    if (message.startsWith("P")) {
-      serial.setup(message);
+    if (message.startsWith("R")) {
+      serial.setup(message, function (response) {
+        responseReceived(ws, response);
+      });
+      ws.send("R");
     }
     else {
       serial.handleMessage(message);
@@ -22,8 +24,14 @@ wss.on('connection', function connection(ws) {
   console.log('Client connected.');
 });
 
+function responseReceived(server, theMessage) {
+  //console.log(theMessage);
+  server.send(theMessage);
+}
+
 module.exports = {
-  start: function () {
+  start: function (comPort) {
+    serial.setPort(comPort);
     wsServer.listen(61000);
     console.log("Websocket wsServer running.");
   }

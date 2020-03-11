@@ -1,3 +1,5 @@
+#include <Bounce2.h>
+
 const size_t MAX_PORTS = 16;
 
 unsigned long _pollInterval;
@@ -5,10 +7,12 @@ unsigned long _lastPollTime;
 bool _started = false;
 
 struct PortInfo {
+  String name;
   int pin;
   bool digital;
+  int value;
+  Bounce* debouncer;
 };
-
 
 PortInfo _inputs[MAX_PORTS];
 size_t _inputCount;
@@ -32,25 +36,27 @@ void loop() {
     if (deltaTime > _pollInterval)
     {
       if (_inputCount > 0) {
-        String payload = "";
+
+        //String payload = "";
         for (auto i = 0; i < _inputCount; i++) {
 
           if (_inputs[i].digital) {
-            payload = payload + (digitalRead(_inputs[i].pin) == LOW ? "L" : "H");
+            // Update the Bounce instance :
+            _inputs[i].debouncer->update();
           }
-          else {
-            payload = payload + String(analogRead(_inputs[i].pin));
-          }
+          
+          auto currentValue = _inputs[i].digital ?
+                              _inputs[i].debouncer->read() :
+                              analogRead(_inputs[i].pin);
 
-          if (i < _inputCount - 1) {
-            payload = payload + "|";
+          if (_inputs[i].value != currentValue) {
+            Serial.print(_inputs[i].name + "|" + String(currentValue) + "\n");
+            _inputs[i].value = currentValue;
           }
         }
-        payload = payload + "\n";
-        Serial.print(payload);
       }
 
-      _lastPollTime = currentTime;// + (_pollInterval - (deltaTime - _pollInterval));
+      _lastPollTime = currentTime;
     }
   }
 }
@@ -69,7 +75,8 @@ void setPollRate(String message) {
 }
 
 void processMode(String message) {
-  auto pinNumber = getPinNumber(getPart(message, 1));
+  auto strPin = getPart(message, 1);
+  auto pinNumber = getPinNumber(strPin);
   auto mode = getPart(message, 2);
   auto type = getPart(message, 3);
 
@@ -88,13 +95,24 @@ void processMode(String message) {
   auto isDigital = type == "D";
 
   if (actualMode == OUTPUT) {
+    _outputs[_outputCount].name = strPin;
     _outputs[_outputCount].pin = pinNumber;
     _outputs[_outputCount].digital = isDigital;
+
     _outputCount++;
   }
   else {
+    _inputs[_inputCount].name = strPin;
     _inputs[_inputCount].pin = pinNumber;
     _inputs[_inputCount].digital = isDigital;
+    _inputs[_inputCount].value = actualMode == INPUT_PULLUP ? HIGH : LOW;
+
+    auto db = new Bounce();
+
+    db->attach(pinNumber);
+    db->interval(5); // interval in ms
+
+    _inputs[_inputCount].debouncer = db;
     _inputCount++;
   }
 }
