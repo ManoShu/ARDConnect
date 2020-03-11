@@ -1,6 +1,9 @@
 const fs = require('fs');
 const https = require('https');
 const WebSocket = require('ws');
+
+//require('https').globalAgent.options.ca = require('ssl-root-cas/latest').create();
+
 const serial = require('./serial_handler');
 
 const wsServer = https.createServer({
@@ -17,7 +20,6 @@ wss.on('connection', function connection(ws) {
 });
 
 function responseReceived(theMessage) {
-  //console.log(theMessage);
   wss.clients.forEach(function each(client) {
     if (client.readyState == WebSocket.OPEN) {
       client.send(theMessage);
