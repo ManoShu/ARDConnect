@@ -11,15 +11,7 @@ const wss = new WebSocket.Server({ server: wsServer });
 
 wss.on('connection', function connection(ws) {
   ws.on('message', function incoming(message) {
-    if (message.startsWith("R")) {
-      serial.setup(message, function (response) {
-        responseReceived(ws, response);
-      });
-      ws.send("R");
-    }
-    else {
-      serial.handleMessage(message);
-    }
+    serial.handleMessage(message);
   });
   console.log('Client connected.');
 });
@@ -31,9 +23,13 @@ function responseReceived(server, theMessage) {
 
 module.exports = {
   start: function (comPort) {
-    serial.setPort(comPort);
-    wsServer.listen(61000);
-    console.log("Websocket wsServer running.");
+    serial.setup(comPort, function (response) {
+      responseReceived(ws, response);
+    });
+    var wssPort = 54010;
+    wsServer.listen(wssPort);
+    console.log("Websocket server running on port %i.", wssPort);
+
   }
 };
 

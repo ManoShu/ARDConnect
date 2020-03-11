@@ -3,7 +3,6 @@ const SerialPort = require('serialport');
 var readline = require('readline');
 
 var port = undefined;
-var portReady = false;
 
 function sendMessage(message) {
     console.log('Sending message "%s"...', message);
@@ -48,22 +47,15 @@ module.exports = {
                 });
             });
     },
-
-    setPort: function(thePort){
-        comPort = thePort;
-    },
-    setup: function (message, dataReceived) {
-        if (portReady) return;
+    setup: function (comPort, dataReceived) {
+        this.comPort = comPort;
         dataReceivedCallback = dataReceived;
-        //var messageArgs = message.split("|");
-        //var pollRate = messageArgs[1];
+
         port = new SerialPort(comPort, {
             baudRate: 115200
         });
         port.on('open', function () {
-            //sendMessage('R|'.concat(pollRate));
-            sendMessage(message);
-            portReady = true;
+            
         });
         port.on('data', function (chunk) {
             buffer += chunk;
@@ -74,16 +66,18 @@ module.exports = {
                 var dataBlock = blocks[0];
                 dataReceivedCallback(dataBlock);
             }
-
+        });
+        port.on('error', function (err) {
+            console.log('Error: ', err.message)
+            process.exit(1);
         });
     },
-    isReady: function () { return portReady; },
     handleMessage: function (message) {
-        if (portReady) {
+        if (port.isOpen) {
             sendMessage(message);
         }
         else {
-            console.log("COM PORT NOT READY - Send setup command first!");
+            console.log("WARN: message '%s' received but port is not opened.", message);
         }
     }
 }
