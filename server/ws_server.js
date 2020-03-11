@@ -16,15 +16,19 @@ wss.on('connection', function connection(ws) {
   console.log('Client connected.');
 });
 
-function responseReceived(server, theMessage) {
+function responseReceived(theMessage) {
   //console.log(theMessage);
-  server.send(theMessage);
+  wss.clients.forEach(function each(client) {
+    if (client.readyState == WebSocket.OPEN) {
+      client.send(theMessage);
+    }
+  });
 }
 
 module.exports = {
   start: function (comPort) {
     serial.setup(comPort, function (response) {
-      responseReceived(ws, response);
+      responseReceived(response);
     });
     var wssPort = 54010;
     wsServer.listen(wssPort);
