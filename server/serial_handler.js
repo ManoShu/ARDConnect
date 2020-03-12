@@ -15,7 +15,13 @@ var preModeValues = {};
 function processMode(messageParts) {
     var pinName = messageParts[1];
     var hasEntryOnList = false;
-    portList.forEach(item => hasEntryOnList |= item.name == pinName);
+    var pinEntry = undefined;
+    portList.forEach(item => {
+        hasEntryOnList |= item.name == pinName;
+        if (item.name == pinName) {
+            pinEntry = item;
+        }
+    });
     if (!hasEntryOnList) {
         var pinEntry = new PortInfo(pinName, getPinNumber(pinName));
         var strMode = messageParts[2];
@@ -38,7 +44,25 @@ function processMode(messageParts) {
 
             if (key in preModeValues) {
                 emitPortUpdate(key, preModeValues[key]);
-                delete preModeValues[key];
+                //delete preModeValues[key];
+            }
+            else {
+                var theValue =
+                    pinEntry.digital ?
+                        (arduino.digitalRead(key) == ArduinoFirmata.LOW ? "L" : "H") :
+                        arduino.analogRead(key);
+
+                emitPortUpdate(key, theValue);
+            }
+        }
+    }
+    else {
+        if (pinEntry.mode != ArduinoFirmata.OUTPUT) {
+
+            var key = pinEntry.pinNumber;
+
+            if (key in preModeValues) {
+                emitPortUpdate(key, preModeValues[key]);
             }
             else {
                 var theValue =
@@ -137,7 +161,6 @@ function getPinNumber(strPinName) {
     return Number(strPinName);
 }
 
-
 function isPinDigital(pinNumber) {
     var entryIndex = -1;
     var hasEntryOnList = false;
@@ -207,12 +230,10 @@ module.exports = {
         arduino.on('digitalChange', function (e) {
             var pinType = isPinDigital(e.pin);
             var strValue = e.value == ArduinoFirmata.HIGH ? "H" : "L";
-                if (pinType == true) {
+            if (pinType == true) {
                 emitPortUpdate(e.pin, strValue);
             }
-            else if (pinType == undefined) {
-                preModeValues[pinNumber] = strValue;
-            }
+            preModeValues[pinNumber] = strValue;
         });
 
         arduino.on('analogChange', function (e) {
@@ -224,9 +245,9 @@ module.exports = {
             if (pinType == false) {
                 emitPortUpdate(pinNumber, e.value);
             }
-            else if (pinType == undefined) {
-                preModeValues[pinNumber] = e.value;
-            }
+            
+            preModeValues[pinNumber] = e.value;
+
         });
     },
     handleMessage: function (message) {
