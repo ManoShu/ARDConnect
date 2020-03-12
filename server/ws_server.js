@@ -28,14 +28,17 @@ function responseReceived(theMessage) {
 }
 
 module.exports = {
-  start: function (comPort) {
-    serial.setup(comPort, function (response) {
-      responseReceived(response);
-    });
-    var wssPort = 54010;
-    wsServer.listen(wssPort);
-    console.log("Websocket server running on port %i.", wssPort);
-
+  start: function (wssPort, comPort) {
+    serial.setup(comPort,
+      //message received
+      function (response) {
+        responseReceived(response);
+      },
+      //board connected
+      function () {
+        wsServer.listen(wssPort);
+        console.log("Websocket server running on port %i.", wssPort);
+      });
   }
 };
 
