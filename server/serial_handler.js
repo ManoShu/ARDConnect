@@ -233,7 +233,7 @@ module.exports = {
             if (pinType == true) {
                 emitPortUpdate(e.pin, strValue);
             }
-            preModeValues[pinNumber] = strValue;
+            preModeValues[e.pin] = strValue;
         });
 
         arduino.on('analogChange', function (e) {
