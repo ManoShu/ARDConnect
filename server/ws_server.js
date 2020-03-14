@@ -16,7 +16,6 @@ wss.on('connection', function connection(ws) {
   ws.on('message', function incoming(message) {
     serial.handleMessage(message);
   });
-  console.log('Client connected.');
 });
 
 function responseReceived(theMessage) {
