@@ -2,62 +2,67 @@ const SerialPort = require('serialport');
 const ArduinoFirmata = require('arduino-firmata');
 const readline = require('readline');
 const PortInfo = require('./port_info');
+const clamp = require('clamp');
 
 const arduino = new ArduinoFirmata();
 
 const ANALOG_OFFSET = 14;
 
 var portList = [];
-var inputPorts = [];
 
 var preModeValues = {};
 
+function getPinNumber(strPinName) {
+    if (strPinName[0] == "A") {
+        var analogPort = Number(strPinName[1]);
+        return analogPort + ANALOG_OFFSET;
+    }
+    return Number(strPinName);
+}
+
 function processMode(messageParts) {
-    var pinName = messageParts[1];
+    var pinNumber = getPinNumber(messageParts[1]);
     var hasEntryOnList = false;
     var pinEntry = undefined;
+
     portList.forEach(item => {
-        hasEntryOnList |= item.name == pinName;
-        if (item.name == pinName) {
+        hasEntryOnList |= item.pinNumber == pinNumber;
+        if (item.pinNumber == pinNumber) {
             pinEntry = item;
         }
     });
+
     if (!hasEntryOnList) {
-        var pinEntry = new PortInfo(pinName, getPinNumber(pinName));
-        var strMode = messageParts[2];
-        var strType = messageParts[3];
-        pinEntry.setModeAndType(strMode, strType);
 
-        if (pinEntry.mode == ArduinoFirmata.INPUT) {
-            inputPorts.push(pinEntry.pinNumber);
-        }
+        var strPinMode = messageParts[2];
 
-        //console.log("Adding pin '%s' (%i)...", pinEntry.name, pinEntry.pinNumber);
+        var pinEntry = new PortInfo(pinNumber, strPinMode);
 
         portList.push(pinEntry);
 
         arduino.pinMode(pinEntry.pinNumber, pinEntry.mode);
 
-        if (pinEntry.mode != ArduinoFirmata.OUTPUT) {
+        if (pinEntry.isInput()) {
 
             var key = pinEntry.pinNumber;
 
             if (key in preModeValues) {
                 emitPortUpdate(key, preModeValues[key]);
-                //delete preModeValues[key];
             }
             else {
                 var theValue =
-                    pinEntry.digital ?
-                        (arduino.digitalRead(key) == ArduinoFirmata.LOW ? "L" : "H") :
+                    pinEntry.mode == ArduinoFirmata.INPUT ?
+                        (arduino.digitalRead(key) ? "H" : "L") :
                         arduino.analogRead(key);
 
                 emitPortUpdate(key, theValue);
+
+                preModeValues[key] = theValue;
             }
         }
     }
     else {
-        if (pinEntry.mode != ArduinoFirmata.OUTPUT) {
+        if (pinEntry.isInput()) {
 
             var key = pinEntry.pinNumber;
 
@@ -66,11 +71,13 @@ function processMode(messageParts) {
             }
             else {
                 var theValue =
-                    pinEntry.digital ?
-                        (arduino.digitalRead(key) == ArduinoFirmata.LOW ? "L" : "H") :
+                    pinEntry.mode == ArduinoFirmata.INPUT ?
+                        (arduino.digitalRead(key) ? "H" : "L") :
                         arduino.analogRead(key);
 
                 emitPortUpdate(key, theValue);
+
+                preModeValues[key] = theValue;
             }
         }
     }
@@ -78,6 +85,7 @@ function processMode(messageParts) {
 
 function writeToPin(messageParts) {
     var pinName = messageParts[1];
+    var pinNumber = getPinNumber(pinName);
     var entryIndex = -1;
 
     var hasEntryOnList = false;
@@ -85,22 +93,28 @@ function writeToPin(messageParts) {
 
         if (!hasEntryOnList) {
             entryIndex++;
-            if (item.name == pinName) {
+            if (item.pinNumber == pinNumber) {
                 hasEntryOnList = true;
             }
         }
     });
     if (hasEntryOnList) {
         var pinEntry = portList[entryIndex];
-        if (pinEntry.mode == ArduinoFirmata.OUTPUT) {
+        if (pinEntry.isOutput()) {
+
             var strValue = messageParts[2];
-            if (pinEntry.digital) {
+            if (pinEntry.mode == ArduinoFirmata.OUTPUT) {
                 arduino.digitalWrite(pinEntry.pinNumber, strValue == "L" ?
                     ArduinoFirmata.LOW : ArduinoFirmata.HIGH
                 );
             }
-            else {
-                arduino.analogWrite(pinEntry.pinNumber, Number(strValue));
+            else if (pinEntry.mode == ArduinoFirmata.SERVO) {
+                //console.log("Servo " + strValue);
+                arduino.servoWrite(pinEntry.pinNumber, clamp(Number(strValue), 0, 180));
+            }
+            else if (pinEntry.mode == ArduinoFirmata.PWM) {
+                //console.log("pwm " + strValue);
+                arduino.analogWrite(pinEntry.pinNumber, clamp(Number(strValue), 0, 255));
             }
         }
         else {
@@ -130,7 +144,9 @@ function sendMessage(message) {
     }
 }
 
+var arduinoPort = undefined;
 var dataReceivedCallback = undefined;
+var boardConnectedCallback = undefined;
 
 function emitPortUpdate(port, value) {
 
@@ -148,17 +164,10 @@ function emitPortUpdate(port, value) {
 
     if (hasEntryOnList) {
         var pinEntry = portList[entryIndex];
-        var message = pinEntry.name + "|" + value;
+        var strPort = pinEntry.mode == ArduinoFirmata.ANALOG ? ("A" + String(port - ANALOG_OFFSET)) : String(port);
+        var message = strPort + "|" + value;
         dataReceivedCallback(message);
     }
-}
-
-function getPinNumber(strPinName) {
-    if (strPinName[0] == "A") {
-        var analogPort = Number(strPinName[1]);
-        return analogPort + ANALOG_OFFSET;
-    }
-    return Number(strPinName);
 }
 
 function isPinDigital(pinNumber) {
@@ -176,7 +185,7 @@ function isPinDigital(pinNumber) {
     if (hasEntryOnList) {
         var pinEntry = portList[entryIndex];
 
-        return pinEntry.digital;
+        return pinEntry.mode == ArduinoFirmata.OUTPUT || pinEntry.mode == ArduinoFirmata.INPUT;
     }
 
     return undefined;
@@ -217,19 +226,24 @@ module.exports = {
             });
     },
     setup: function (comPort, dataReceived, boardConnected) {
-        //this.comPort = comPort;
+        arduinoPort = comPort;
         dataReceivedCallback = dataReceived;
+        boardConnectedCallback = boardConnected;
 
-        arduino.connect(comPort);
+        this.connect();
+    },
+    connect: function () {
+        arduino.connect(arduinoPort);
 
         arduino.on('connect', function () {
 
-            boardConnected();
+            boardConnectedCallback();
         });
 
         arduino.on('digitalChange', function (e) {
             var pinType = isPinDigital(e.pin);
-            var strValue = e.value == ArduinoFirmata.HIGH ? "H" : "L";
+            var strValue = e.value ? "H" : "L";
+
             if (pinType == true) {
                 emitPortUpdate(e.pin, strValue);
             }
@@ -245,10 +259,16 @@ module.exports = {
             if (pinType == false) {
                 emitPortUpdate(pinNumber, e.value);
             }
-            
+
             preModeValues[pinNumber] = e.value;
 
         });
+    },
+    isOpen: function () {
+        return arduino.isOpen()
+    },
+    disconnect: function () {
+        arduino.close();
     },
     handleMessage: function (message) {
         if (arduino.isOpen) {
@@ -257,5 +277,17 @@ module.exports = {
         else {
             console.log("WARN: message '%s' received but port is not opened.", message);
         }
-    }
+    }//,
+    // sendCurrentStates: function () {
+    //     Object.keys(preModeValues).forEach(function (key) {
+    //         emitPortUpdate(key, preModeValues[key]);
+    //     });
+    // },
+    // resetBoard: function () {
+    //     arduino.reset(function () {
+    //         console.log('board reset');
+    //     });
+    // }
+
+
 }

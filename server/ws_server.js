@@ -13,6 +13,7 @@ const wsServer = https.createServer({
 const wss = new WebSocket.Server({ server: wsServer });
 
 wss.on('connection', function connection(ws) {
+
   ws.on('message', function incoming(message) {
     serial.handleMessage(message);
   });
