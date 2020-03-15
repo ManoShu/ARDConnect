@@ -18,7 +18,7 @@ if (process.platform === "win32") {
 process.on("SIGINT", function () {
     //graceful shutdown
     if (serial.isOpen()) {
-        console.log("disconnecting...");
+        console.log("Disconnecting from serial port...");
         serial.disconnect();
     }
     process.exit();
