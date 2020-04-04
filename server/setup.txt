@@ -9,4 +9,10 @@ Options > Privacy & Security
             Type "https://localhost:54010" > Get Certificate > Confirm Security Exception
                 PROFIT
 
+On chrome:
+    Access "chrome://flags/#allow-insecure-localhost" > Enable
+        Reboot
+            PROFIT???
 
+IE/Edge:
+    NOTHING ????? NEED VM TEST
