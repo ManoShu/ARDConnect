@@ -1,0 +1,12 @@
+TODO: Setup server for wss communication
+
+RUN THE SERVER UNTIL PORT MESSAGE IS SHOWN
+
+On Firefox:
+Options > Privacy & Security
+    Security > Certificates > View Certificates
+        Servers tab > Add Exception...
+            Type "https://localhost:54010" > Get Certificate > Confirm Security Exception
+                PROFIT
+
+

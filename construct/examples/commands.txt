@@ -4,3 +4,7 @@ M|PIN|[O|I|A]|[D|A] => Set mode for PIN.
 
 W|PIN|VALUE => Writes VALUE on PIN
     if digital, VALUE = [L|H]
+
+Received message
+PIN|VALUE
+    if digital, VALUE = [L|H]

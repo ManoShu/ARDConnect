@@ -4,6 +4,8 @@ const readline = require('readline');
 const PortInfo = require('./port_info');
 const clamp = require('clamp');
 
+const kbInput = require('./keyboard_input');
+
 const arduino = new ArduinoFirmata();
 
 const ANALOG_OFFSET = 14;
@@ -191,7 +193,6 @@ function isPinDigital(pinNumber) {
     return undefined;
 }
 
-
 module.exports = {
     selectPort: function (portSelected) {
 
@@ -205,24 +206,39 @@ module.exports = {
                         portIndex, e.path, e.manufacturer, e.productId);
                 });
 
-                var rl = readline.createInterface(process.stdin, process.stdout);
-
-                rl.setPrompt('Select a COM port> ');
-                rl.prompt();
-                rl.on('line', function (line) {
-
-                    var selectedIndex = parseInt(line);
+                kbInput.question('Select a COM port: ', function (answer) {
+                    var selectedIndex = parseInt(answer);
                     if (isNaN(selectedIndex) || selectedIndex < 1 || selectedIndex > portList.length) {
                         console.log("Invalid index!");
-                        rl.prompt();
+                        kbInput.close();
+                        process.exit(-1);
                     }
                     else {
                         var thePort = portList[selectedIndex - 1].path;
 
-                        rl.close();
+                        //answered = true;
+                        kbInput.close();
+
                         portSelected(thePort);
                     }
                 });
+
+                // rl.setPrompt('Select a COM port: ');
+                // rl.prompt();
+                // rl.on('line', function (line) {
+
+                //     var selectedIndex = parseInt(line);
+                //     if (isNaN(selectedIndex) || selectedIndex < 1 || selectedIndex > portList.length) {
+                //         console.log("Invalid index!");
+                //         rl.prompt();
+                //     }
+                //     else {
+                //         var thePort = portList[selectedIndex - 1].path;
+
+                //         rl.close();
+                //         portSelected(thePort);
+                //     }
+                // });
             });
     },
     setup: function (comPort, dataReceived, boardConnected) {

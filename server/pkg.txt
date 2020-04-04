@@ -1,0 +1,4 @@
+run "pkg main.js"
+copy .cert and .key files
+copy *.node files
+PROFIT
